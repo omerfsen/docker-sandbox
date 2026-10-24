@@ -1,0 +1,193 @@
+Script started on 2026-10-24 15:04:29+01:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/02-sandbox-basics/solution.sh" <not executed on terminal>]
+
+[36m# Lab 02 — Sandbox basics[0m
+[32m$ [0m[1msbx rm --force lab-02-basics lab-02-nows lab-02-once; rm -rf ~/sbx-labs/02 ~/sbx-labs/02-out[0m
+[32m$ [0m[1mmkdir -p ~/sbx-labs/02 && echo "hello from the host" > ~/sbx-labs/02/README.txt[0m
+[32m$ [0m[1msbx create --name lab-02-basics shell ~/sbx-labs/02[0m
+]11;?[c
+[94m  SANDBOX[m
+    [90mName:[m       lab-02-basics
+    [90mAgent:[m      shell
+    [90mWorkspace:[m  ~/sbx-labs/02 (rw)
+    [90mImage:[m      docker/sandbox-templates:shell-docker
+    [90mCPU:[m        4
+    [90mMemory:[m     3.9 GiB
+
+[94m  IMAGE[m
+    [35m⠋[m image[90m — [mpulling…
+[?25l[1A[K    [35m⠙[m image[90m — [mpulling…
+[1A[K    [35m⠹[m image[90m — [mpulling…
+[1A[K    [35m⠸[m image[90m — [mpulling…
+[1A[K    [35m⠼[m image[90m — [mpulling…
+[1A[K    [35m⠴[m image[90m — [mpulling…
+[1A[K    [35m⠦[m image[90m — [mpulling…
+[1A[K    [35m⠧[m image[90m — [mpulling…
+[1A[K    [35m⠇[m image[90m — [mpulling…
+        7/7 layers · finalizing image…
+[1A[K[1A[K    [32m✓[m image[90m — [mready
+[?25h[?25h
+    [32m✓[m Created sandbox lab-02-basics
+[34m        try:[m sbx run --name lab-02-basics
+
+[32m$ [0m[1msbx ls | grep -E 'SANDBOX|lab-'[0m
+SANDBOX         AGENT    STATUS                 PORTS   WORKSPACE                                   CREATED
+lab-02-basics   shell    ● running                      /home/serra/sbx-labs/02                     15s
+
+[36m# A microVM with its own kernel, and your workspace at the same path[0m
+[32m$ [0m[1muname -r; sbx exec lab-02-basics sh -c '. /etc/os-release; echo $PRETTY_NAME; uname -r'[0m
+6.8.0-147-generic
+Ubuntu 26.04.1 LTS
+7.0.14
+[32m$ [0m[1msbx exec lab-02-basics id[0m
+uid=1000(agent) gid=1000(agent) groups=1000(agent),27(sudo),1001(docker)
+[32m$ [0m[1msbx exec lab-02-basics sh -c "pwd; cat README.txt"[0m
+/home/serra/sbx-labs/02
+hello from the host
+[32m$ [0m[1msbx exec lab-02-basics sh -c 'echo written-in-the-sandbox > from-sandbox.txt'; cat ~/sbx-labs/02/from-sandbox.txt[0m
+written-in-the-sandbox
+[32m$ [0m[1msbx exec lab-02-basics sh -c 'mount | grep virtiofs'[0m
+bind-95f03ffa45a7d998 on /etc/resolv.conf type virtiofs (ro,relatime)
+host on /home/serra/sbx-labs/02 type virtiofs (rw,nosuid,nodev,relatime)
+
+[36m# Not root by default, but root is one sudo away inside the VM[0m
+[32m$ [0m[1msbx exec lab-02-basics sh -c 'touch /etc/probe'[0m
+touch: cannot touch '/etc/probe': Permission denied
+[2m[exit 1][0m
+[32m$ [0m[1msbx exec lab-02-basics sudo -n id -u; sbx exec -u root lab-02-basics id -u[0m
+0
+0
+
+[36m# exec behaves like docker exec: exit codes, stdin, env[0m
+[32m$ [0m[1msbx exec lab-02-basics sh -c 'exit 3'; echo "exit code: $?"[0m
+exit code: 3
+[32m$ [0m[1mecho "piped stdin" | sbx exec -i lab-02-basics cat[0m
+piped stdin
+[32m$ [0m[1msbx exec -e GREETING=merhaba lab-02-basics sh -c 'echo $GREETING'[0m
+merhaba
+
+[36m# A created sandbox stops by itself when nothing is attached[0m
+[32m$ [0m[1msleep 35; sbx ls --json | jq -r '.[] | select(.name == "lab-02-basics") | .status'[0m
+stopped
+[32m$ [0m[1msbx exec lab-02-basics cat README.txt[0m
+]11;?[c
+    [32m✓[m sandbox lab-02-basics[90m — [mstarted
+
+hello from the host
+
+[36m# run -d keeps it running, detached[0m
+[32m$ [0m[1msbx run -d --name lab-02-basics[0m
+]11;?[c
+    [32m✓[m sandbox lab-02-basics[90m — [mattaching to the existing sandbox (workspace /home/serra/sbx-labs/02)
+    [32m✓[m sandbox lab-02-basics[90m — [mrunning detached
+        [90mworkspace /home/serra/sbx-labs/02[m
+39e13e02-797e-4e1b-b91a-12b031aff4e6
+
+[32m$ [0m[1msleep 35; sbx ls | grep -E 'SANDBOX|lab-02'[0m
+SANDBOX         AGENT    STATUS                 PORTS   WORKSPACE                                   CREATED
+lab-02-basics   shell    ● running (detached)           /home/serra/sbx-labs/02                     2m
+
+[36m# stop keeps everything inside the VM[0m
+[32m$ [0m[1msbx exec lab-02-basics sh -c 'echo kept > ~/keep.txt' && sbx stop lab-02-basics[0m
+]11;?[c
+  Stopped sandbox lab-02-basics
+[34m    try:[m sbx run --name lab-02-basics
+
+[32m$ [0m[1msbx exec lab-02-basics cat /home/agent/keep.txt[0m
+]11;?[c
+    [32m✓[m sandbox lab-02-basics[90m — [mstarted
+
+kept
+
+[36m# Copy files in and out[0m
+[32m$ [0m[1mmkdir -p ~/sbx-labs/02-out && echo "copied in" > ~/sbx-labs/02-out/in.txt[0m
+[32m$ [0m[1msbx cp ~/sbx-labs/02-out/in.txt lab-02-basics:/home/agent/ && sbx exec lab-02-basics cat /home/agent/in.txt[0m
+copied in
+[32m$ [0m[1msbx cp lab-02-basics:/etc/os-release ~/sbx-labs/02-out/ && ls -l ~/sbx-labs/02-out/os-release[0m
+lrwxrwxrwx 1 serra serra 21 Aug 24 11:33 /home/serra/sbx-labs/02-out/os-release -> ../usr/lib/os-release
+[32m$ [0m[1msbx cp -L lab-02-basics:/etc/os-release ~/sbx-labs/02-out/os-release-real && head -1 ~/sbx-labs/02-out/os-release-real[0m
+PRETTY_NAME="Ubuntu 26.04.1 LTS"
+[32m$ [0m[1msbx cp ~/sbx-labs/02-out/in.txt lab-02-basics:/etc/ && sbx exec lab-02-basics ls -l /etc/in.txt[0m
+-rw-rw-r-- 1 agent docker 10 Oct 24 14:07 /etc/in.txt
+
+[36m# No workspace: the agent works in the VM's own filesystem[0m
+[32m$ [0m[1msbx create --name lab-02-nows shell[0m
+]11;?[c
+[94m  SANDBOX[m
+    [90mName:[m       lab-02-nows
+    [90mAgent:[m      shell
+    [90mWorkspace:[m  none · no workspace bind mount
+    [90mImage:[m      docker/sandbox-templates:shell-docker
+    [90mCPU:[m        4
+    [90mMemory:[m     3.9 GiB
+
+[94m  IMAGE[m
+    [35m⠋[m image[90m — [mpulling…
+[?25l[1A[K    [35m⠙[m image[90m — [mpulling…
+[1A[K    [35m⠹[m image[90m — [mpulling…
+[1A[K    [35m⠸[m image[90m — [mpulling…
+[1A[K    [35m⠼[m image[90m — [mpulling…
+[1A[K    [35m⠴[m image[90m — [mpulling…
+[1A[K    [35m⠦[m image[90m — [mpulling…
+[1A[K    [35m⠧[m image[90m — [mpulling…
+[1A[K    [32m✓[m image[90m — [mready
+[?25h[?25h
+    [32m✓[m Created sandbox lab-02-nows
+[34m        try:[m sbx run --name lab-02-nows
+
+[32m$ [0m[1msbx exec lab-02-nows sh -c "pwd; ls -A"[0m
+/home/agent/workspace
+
+[36m# Throwaway sandbox: run --rm removes it when the session ends[0m
+[32m$ [0m[1msbx run --rm --name lab-02-once shell ~/sbx-labs/02 -- -c 'echo hello from $(hostname) as $(id -un)'[0m
+]11;?[c
+[94m  SANDBOX[m
+    [90mName:[m       lab-02-once
+    [90mAgent:[m      shell
+    [90mWorkspace:[m  ~/sbx-labs/02 (rw)
+    [90mImage:[m      docker/sandbox-templates:shell-docker
+    [90mCPU:[m        4
+    [90mMemory:[m     3.9 GiB
+
+[94m  IMAGE[m
+    [35m⠋[m image[90m — [mpulling…
+[?25l[1A[K    [35m⠙[m image[90m — [mpulling…
+[1A[K    [35m⠹[m image[90m — [mpulling…
+[1A[K    [35m⠸[m image[90m — [mpulling…
+[1A[K    [35m⠼[m image[90m — [mpulling…
+[1A[K    [35m⠴[m image[90m — [mpulling…
+[1A[K    [35m⠦[m image[90m — [mpulling…
+[1A[K    [35m⠧[m image[90m — [mpulling…
+[1A[K    [35m⠇[m image[90m — [mpulling…
+        7/7 layers · finalizing image…
+[1A[K[1A[K    [32m✓[m image[90m — [mready
+[?25h[?25h
+    [32m✓[m Created sandbox lab-02-once
+
+    [90m○[m shell[90m — [mstarting in sandbox lab-02-once…
+        [90mworkspace /home/serra/sbx-labs/02[m
+
+\]0;[📦 lab-02-once][2J[Hhello from lab-02-once as agent
+\]0;
+[32m$ [0m[1msbx ls -q | grep lab-02[0m
+lab-02-basics
+lab-02-nows
+
+[36m# Clean up (rm asks for confirmation in a terminal; --force skips it)[0m
+[32m$ [0m[1msbx rm --force lab-02-basics lab-02-nows[0m
+]11;?[c
+[?25l    [35m⠋[m removing sandbox lab-02-basics [90m(0s)[m
+[1A[K    [35m⠙[m removing sandbox lab-02-basics [90m(0s)[m
+[1A[K    [35m⠹[m removing sandbox lab-02-basics [90m(0s)[m
+[1A[K    [35m⠸[m removing sandbox lab-02-basics [90m(0s)[m
+[1A[K[?25h  Removed sandbox lab-02-basics
+[?25l    [35m⠋[m removing sandbox lab-02-nows [90m(0s)[m
+[1A[K    [35m⠙[m removing sandbox lab-02-nows [90m(0s)[m
+[1A[K    [35m⠹[m removing sandbox lab-02-nows [90m(0s)[m
+[1A[K    [35m⠸[m removing sandbox lab-02-nows [90m(0s)[m
+[1A[K    [35m⠼[m removing sandbox lab-02-nows [90m(0s)[m
+[1A[K    [35m⠴[m removing sandbox lab-02-nows [90m(0s)[m
+[1A[K[?25h  Removed sandbox lab-02-nows
+
+[32m$ [0m[1mrm -rf ~/sbx-labs/02 ~/sbx-labs/02-out[0m
+
+Script done on 2026-10-24 15:09:16+01:00 [COMMAND_EXIT_CODE="0"]

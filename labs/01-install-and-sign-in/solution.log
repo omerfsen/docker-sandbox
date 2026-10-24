@@ -1,0 +1,128 @@
+Script started on 2026-10-24 15:03:51+01:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/01-install-and-sign-in/solution.sh" <not executed on terminal>]
+
+[36m# Lab 01 — Install sbx and sign in[0m
+
+[36m# Installed with: sudo apt-get install -y docker-sbx=0.49.2-1~ubuntu.24.04~noble && sudo apt-mark hold docker-sbx[0m
+[32m$ [0m[1mapt-cache policy docker-sbx | head -6; apt-mark showhold[0m
+docker-sbx:
+  Installed: 0.49.2-1~ubuntu.24.04~noble
+  Candidate: 0.49.2-1~ubuntu.24.04~noble
+  Version table:
+ *** 0.49.2-1~ubuntu.24.04~noble 500
+        500 https://download.docker.com/linux/ubuntu noble/stable amd64 Packages
+docker-sbx
+[32m$ [0m[1msbx version[0m
+
+  sbx version v0.49.2 5d40fd43027b33ed1f1a39c14fb07e2503d6998f
+
+
+[36m# What the package put on the machine[0m
+[32m$ [0m[1mdpkg -L docker-sbx | grep -E '^/(usr/bin|usr/libexec|etc)/' | grep -v '/lib$'[0m
+/etc/apparmor.d
+/etc/apparmor.d/docker-sbx-nerdbox-shim
+/usr/bin/sbx
+/usr/libexec/containerd-shim-nerdbox-gpu-v1
+/usr/libexec/containerd-shim-nerdbox-v1
+/usr/libexec/lib/libsailor.so
+/usr/libexec/mkfs.erofs
+/usr/libexec/mkfs.ext4
+/usr/libexec/nerdbox-kernel-x86_64
+/usr/libexec/nerdbox-rootfs-x86_64.erofs
+
+[36m# Signed in with: sbx login (device code in the browser), then: sbx policy init balanced[0m
+[32m$ [0m[1msbx setup < /dev/null[0m
+
+  sbx setup — detected configuration
+
+  PREREQUISITES
+    host           sbx, Docker                                   Ready
+
+  SECRETS
+    agent secrets  none found on host                            0 found
+
+  SSH AGENT
+    forwarding     global consent                                Enabled
+    socket         /run/user/1000/gnupg/S.gpg-agent.ssh (current…Dynamic
+
+  SKILLS
+    skills         19 skill(s), 1 folder                         19 found
+
+  GOVERNANCE
+    Local policy   balanced                                      Set
+
+  (non-interactive: showing detected configuration only)
+
+
+[36m# The daemon: one per user, started by the CLI when needed[0m
+[32m$ [0m[1msbx daemon status[0m
+]11;?[c
+    [90mStatus:[m  [32m●[m running
+    [90mSocket:[m  /home/serra/.local/state/sandboxes/sandboxes/sandboxd/sandboxd.sock
+    [90mLogs:[m    /home/serra/.local/state/sandboxes/sandboxes/sandboxd/daemon.log
+
+[32m$ [0m[1mgrep Groups /proc/$(pgrep -f '^/usr/bin/sbx daemon start')/status; getent group kvm[0m
+Groups:	4 988 993 1000 1001 
+kvm:x:993:serra
+[32m$ [0m[1mtail -20 ~/.local/state/sandboxes/sandboxes/sandboxd/daemon.log | grep '}$' | jq -c '{time, level, msg}' | tail -3[0m
+{"time":"2026-10-24T15:04:11.598190842+01:00","level":"INFO","msg":"http request"}
+{"time":"2026-10-24T15:04:11.62091511+01:00","level":"INFO","msg":"uploaded event batch"}
+{"time":"2026-10-24T15:04:20.100607718+01:00","level":"INFO","msg":"governance snapshot refreshed"}
+
+[36m# One command checks the whole installation[0m
+[32m$ [0m[1msbx diagnose[0m
+]11;?[c
+[94m  INSTALLATION[m
+[?25l    [35m⠋[m CLI binary — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m CLI binary[90m — [mfound
+        [90m/usr/bin/sbx[m
+[?25l    [35m⠋[m Binary version — checking… [90m(0s)[m
+[1A[K[?25h    [33m![m Binary version[90m — [mcould not check for updates
+        [90munexpected status code: 403[m
+[?25l    [35m⠋[m Host processes — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m Host processes[90m — [m2 sbx, 0 containerd-shim-nerdbox-v1
+        [90msbx PID 116881: /usr/bin/sbx sbx PID 131062: /usr/bin/sbx[m
+[?25l    [35m⠋[m Daemon — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m Daemon[90m — [mhealthy
+        [90mversion v0.49.2[m
+[?25l    [35m⠋[m Daemon diagnostics — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m Daemon diagnostics[90m — [mcollected (86073 bytes)
+
+[94m  PLATFORM[m
+[?25l    [35m⠋[m Virtualization — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m Virtualization[90m — [msupported
+        [90m/dev/kvm is accessible[m
+[?25l    [35m⠋[m mkfs.erofs — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m mkfs.erofs[90m — [mfound
+        [90m/usr/libexec/mkfs.erofs, default block size 4096 bytes, guest kernel page size 4096 bytes[m
+[?25l    [35m⠋[m mkfs.ext4 — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m mkfs.ext4[90m — [mfound
+        [90m/usr/libexec/mkfs.ext4, mke2fs 1.47.4 (6-Mar-2025)[m
+
+[94m  STORAGE[m
+[?25l    [35m⠋[m Storage directories — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m Storage directories[90m — [mall 1 paths present
+[?25l    [35m⠋[m Directory permissions — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m Directory permissions[90m — [mall writable
+[?25l    [35m⠋[m Disk space — checking… [90m(0s)[m
+[1A[K[?25h    [33m![m Disk space[90m — [m7.447GiB free
+        [90m7.447GiB free of 31.41GiB on the state directory's volume[m
+        [90mLow on space: a new agent template needs a few GiB, and running sandboxes grow into what is left. Remove stopped sandboxes with: sbx prune[m
+[?25l    [35m⠋[m ZFS offset sync — checking… [90m(0s)[m
+[1A[K[?25h    [90m⊘[m ZFS offset sync[90m — [mstate directory is not on ZFS
+
+[94m  CONNECTION[m
+[?25l    [35m⠋[m Version match — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m Version match[90m — [mv0.49.2
+[?25l    [35m⠋[m Socket — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m Socket[90m — [mresponsive
+[?25l    [35m⠋[m SSH client config — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m SSH client config[90m — [mnot configured
+[?25l    [35m⠋[m Authentication — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m Authentication[90m — [mauthenticated
+[?25l    [35m⠋[m Global network policy — checking… [90m(0s)[m
+[1A[K[?25h    [32m✓[m Global network policy[90m — [minitialized
+
+    [32m14 passed[m[90m · [m[33m2 warnings[m[90m · [m[90m1 skipped[m
+
+
+Script done on 2026-10-24 15:04:29+01:00 [COMMAND_EXIT_CODE="0"]

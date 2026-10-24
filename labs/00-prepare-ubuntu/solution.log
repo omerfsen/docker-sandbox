@@ -1,0 +1,37 @@
+Script started on 2026-10-24 15:03:30+01:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/00-prepare-ubuntu/solution.sh" <not executed on terminal>]
+
+[36m# Lab 00 — Prepare a fresh Ubuntu 24.04 host[0m
+[32m$ [0m[1m. /etc/os-release; echo "$PRETTY_NAME"; uname -r; nproc; free -h | head -2[0m
+Ubuntu 24.04.5 LTS
+6.8.0-147-generic
+4
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       1.4Gi       2.0Gi       1.4Mi       4.7Gi       6.4Gi
+
+[36m# KVM: the CPU flag, the device, and the group[0m
+[32m$ [0m[1mgrep -owE 'vmx|svm' /proc/cpuinfo | sort | uniq -c[0m
+      4 svm
+[32m$ [0m[1mls -l /dev/kvm[0m
+crw-rw---- 1 root kvm 10, 232 Oct 24 15:02 /dev/kvm
+[32m$ [0m[1mid -nG | tr " " "\n" | grep -x kvm[0m
+kvm
+
+[36m# The course's host check[0m
+[32m$ [0m[1mscripts/check-host.sh[0m
+Docker Sandboxes host check
+  [ok]   OS: Ubuntu 24.04.5 LTS
+  [ok]   architecture: x86_64
+  [ok]   CPU virtualization: svm
+  [ok]   /dev/kvm present
+  [ok]   serra is in the kvm group
+  [ok]   /dev/kvm is readable and writable by this shell
+  [ok]   sandbox daemon (pid 116881) has the kvm group
+  [warn] disk: 8 GB free in /home/serra (each agent image needs a few GB; 15 GB or more is comfortable)
+  [ok]   curl
+  [ok]   git
+  [ok]   jq
+  [ok]   bats 1.10.0 (lab tests)
+  [ok]   sbx installed: v0.49.2
+Host is ready for Docker Sandboxes.
+
+Script done on 2026-10-24 15:03:51+01:00 [COMMAND_EXIT_CODE="0"]
