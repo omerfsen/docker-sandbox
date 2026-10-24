@@ -270,6 +270,10 @@ sbx exec lab-02-nows sh -c "pwd; ls -A"
 The agent works in an empty directory inside the VM. Nothing it does touches your disk. Use
 `sbx cp` to get results out.
 
+**Careful: `sbx run` is different.** `sbx run shell` without a path mounts the **current
+directory**. To get a detached sandbox without a workspace, create it first, then start it:
+`sbx create --name NAME shell && sbx run -d --name NAME`.
+
 ## 10. A throwaway sandbox
 
 `run --rm` creates a sandbox, runs the agent, and removes the sandbox when the session ends.
