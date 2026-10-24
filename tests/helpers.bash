@@ -42,16 +42,18 @@ sandbox_status() {
   sbx ls --json | jq -r --arg n "$1" '.[] | select(.name == $n) | .status'
 }
 
-# Create a shell sandbox and keep it running. `sbx run -d` starts it detached,
-# which keeps it up; a sandbox made with `sbx create` stops by itself when
-# nothing is attached, and the next exec then prints a "started" line.
-# Usage: create_sandbox NAME [WORKSPACE] [extra sbx run flags...]
+# Create a shell sandbox and keep it running. A sandbox made with `sbx create`
+# stops by itself when nothing is attached (and the next exec then prints a
+# "started" line); `sbx run -d --name` starts it detached, which keeps it up.
+# Create first: `sbx run` without a path would mount the current directory.
+# Usage: create_sandbox NAME [WORKSPACE] [extra sbx create flags...]
 # Without a workspace the sandbox gets no host bind mount.
 create_sandbox() {
   local name="$1" workspace="${2:-}"
   shift $(($# < 2 ? $# : 2))
   delete_sandbox "$name"
-  sbx run -d --name "$name" "$@" shell ${workspace:+"$workspace"} </dev/null >/dev/null 2>&1
+  sbx create --name "$name" "$@" shell ${workspace:+"$workspace"} </dev/null >/dev/null 2>&1
+  sbx run -d --name "$name" </dev/null >/dev/null 2>&1
 }
 
 delete_sandbox() {

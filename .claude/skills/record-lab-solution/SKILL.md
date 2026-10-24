@@ -50,6 +50,8 @@ Rules that keep replays reliable:
 - A sandbox made with `sbx create` stops after ~30 s with nothing attached, and the next
   `exec` prints a "started" line. That is fine in a replay; in tests, create sandboxes with
   `create_sandbox` (it uses `sbx run -d`) or use `run --separate-stderr`.
+- `sbx run` without a path mounts the **current directory** (the course checkout). For a
+  sandbox without a workspace, `sbx create --name X shell` first, then `sbx run -d --name X`.
 - `sbx run` (without `-d`) needs a terminal. It works in a recording; in tests wrap it in
   `script -qec '...' /dev/null`.
 - Filter `sbx ls` to `lab-` rows so other sandboxes on the host do not land in the recording.
