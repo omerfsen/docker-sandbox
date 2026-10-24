@@ -14,7 +14,9 @@ you can watch or run.
 
 This course is the short twin of the [OpenShell course](https://github.com/omerfsen/openshell):
 same shape, same machine, the core path in eight labs. Where sbx has no equivalent of an
-OpenShell feature, the lab says so plainly and shows the closest thing.
+OpenShell feature, the lab says so plainly and shows the closest thing. The side-by-side
+comparison is written up in [An OpenShell alternative? Testing Docker Sandboxes (sbx) with the
+same labs](https://www.linkedin.com/pulse/openshell-alternative-testing-docker-sandboxes-sbx-same-omer-sen-uhg6e).
 
 > **Version.** This course is written and tested against **sbx v0.49.2** (commit `5d40fd43`,
 > package `docker-sbx 0.49.2-1~ubuntu.24.04~noble`) on Ubuntu 24.04.5 LTS (kernel 6.8), on a KVM
@@ -125,6 +127,7 @@ targets, so you need outbound internet access. Lab 06's Claude checks run only w
 ## References
 
 - Docker Sandboxes documentation: [docs.docker.com/ai/sandboxes](https://docs.docker.com/ai/sandboxes/)
+- Article comparing sbx and OpenShell: [An OpenShell alternative?](https://www.linkedin.com/pulse/openshell-alternative-testing-docker-sandboxes-sbx-same-omer-sen-uhg6e)
 - Releases: [github.com/docker/sbx-releases](https://github.com/docker/sbx-releases/releases/tag/v0.49.2)
 
 ## License
