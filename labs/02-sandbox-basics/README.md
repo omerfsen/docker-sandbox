@@ -330,4 +330,4 @@ labs/02-sandbox-basics/solution.sh   # replay it live against your own daemon (P
 bats labs/02-sandbox-basics/test.bats
 ```
 
-**Next:** Lab 03 — Default-deny networking (coming in the next part of the course)
+**Next:** [Lab 03 — Default-deny networking](../03-network-default-deny/README.md)

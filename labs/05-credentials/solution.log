@@ -1,0 +1,119 @@
+Script started on 2026-10-24 15:49:08+01:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/05-credentials/solution.sh" <not executed on terminal>]
+
+[36m# Lab 05 — Credentials the agent never sees[0m
+[32m$ [0m[1msbx rm --force lab-05-cred[0m
+[32m$ [0m[1msbx run -d --name lab-05-cred shell && sbx policy allow network --sandbox lab-05-cred postman-echo.com,httpbin.org[0m
+]11;?[c
+[94m  SANDBOX[m
+    [90mName:[m       lab-05-cred
+    [90mAgent:[m      shell
+    [90mWorkspace:[m  ~/projects/docker-sandbox-labs-03-05 (rw)
+    [90mImage:[m      docker/sandbox-templates:shell-docker
+    [90mCPU:[m        4
+    [90mMemory:[m     3.9 GiB
+
+[94m  IMAGE[m
+    [35m⠋[m image[90m — [mpulling…
+[?25l[1A[K    [35m⠙[m image[90m — [mpulling…
+[1A[K    [35m⠹[m image[90m — [mpulling…
+[1A[K    [35m⠸[m image[90m — [mpulling…
+[1A[K    [35m⠼[m image[90m — [mpulling…
+[1A[K    [35m⠴[m image[90m — [mpulling…
+[1A[K    [35m⠦[m image[90m — [mpulling…
+[1A[K    [35m⠧[m image[90m — [mpulling…
+[1A[K    [32m✓[m image[90m — [mready
+[?25h[?25h
+    [32m✓[m Created sandbox lab-05-cred
+
+    [32m✓[m sandbox lab-05-cred[90m — [mrunning detached
+        [90mworkspace /home/serra/projects/docker-sandbox-labs-03-05[m
+70bc925f-cd63-44ee-92f9-c1516413d4d1
+
+]11;?[c
+  Added rule f07f3e4c-1dee-4843-8562-6cf31acec342 to policy local (scope: sandbox:lab-05-cred): postman-echo.com [tcp]
+  Added rule 7d3ae48e-1f82-4cad-b78f-519c9e57e358 to policy local (scope: sandbox:lab-05-cred): httpbin.org [tcp]
+
+
+[36m# Store a secret bound to one host (a fake value: never put a real one in a recording)[0m
+[32m$ [0m[1msbx secret set-custom --sandbox lab-05-cred --host postman-echo.com --env DEMO_TOKEN --value fake-training-secret-123[0m
+]11;?[c
+[33m  warning:[m no keychain detected; this secret will be stored on disk, protected by file permissions rather than a password
+  Applied secret updates to sandbox lab-05-cred
+  Saved custom secret sbx-cs-bq2udC4Et0iH4qMI for target postman-echo.com env DEMO_TOKEN (lab-05-cred)
+
+    [90mGenerated placeholder:[m  sbx-cs-bq2udC4Et0iH4qMI
+
+  You may need to update environment variable DEMO_TOKEN inside sandbox "lab-05-cred" to "sbx-cs-bq2udC4Et0iH4qMI" (the placeholder value).
+
+[32m$ [0m[1msbx secret ls | grep -E 'SCOPE|lab-05-cred'[0m
+SCOPE      TYPE      NAME        SECRET
+SCOPE         TARGETS            ENV          PLACEHOLDER               SECRET
+lab-05-cred   postman-echo.com   DEMO_TOKEN   sbx-cs-bq2udC4Et0iH4qMI   fake-t**************-123
+
+[36m# The sandbox only ever holds the placeholder[0m
+[32m$ [0m[1mP=$(sbx secret ls --json | jq -r '.custom_secrets[] | select(.scope == "lab-05-cred" and .env == "DEMO_TOKEN") | .placeholder'); echo "P=$P" > ~/.lab05-placeholder; cat ~/.lab05-placeholder[0m
+P=sbx-cs-bq2udC4Et0iH4qMI
+[32m$ [0m[1msbx exec lab-05-cred sh -c 'echo "DEMO_TOKEN=[$DEMO_TOKEN]"'[0m
+DEMO_TOKEN=[]
+[32m$ [0m[1m. ~/.lab05-placeholder; sbx exec -e DEMO_TOKEN=$P lab-05-cred sh -c 'echo "inside: $DEMO_TOKEN"'[0m
+inside: sbx-cs-bq2udC4Et0iH4qMI
+
+[36m# The proxy swaps it in headers, only on the way to the bound host[0m
+[32m$ [0m[1m. ~/.lab05-placeholder; sbx exec -e DEMO_TOKEN=$P lab-05-cred sh -c 'curl -s -H "Authorization: Bearer $DEMO_TOKEN" https://postman-echo.com/headers | jq -r .headers.authorization'[0m
+Bearer fake-training-secret-123
+[32m$ [0m[1m. ~/.lab05-placeholder; sbx exec -e DEMO_TOKEN=$P lab-05-cred sh -c 'curl -s -H "X-Api-Key: $DEMO_TOKEN" https://postman-echo.com/headers | jq -r ".headers[\"x-api-key\"]"'[0m
+fake-training-secret-123
+[32m$ [0m[1m. ~/.lab05-placeholder; sbx exec -e DEMO_TOKEN=$P lab-05-cred sh -c 'curl -s -H "Authorization: Bearer $DEMO_TOKEN" https://httpbin.org/headers | jq -r .headers.Authorization'[0m
+Bearer sbx-cs-bq2udC4Et0iH4qMI
+[32m$ [0m[1m. ~/.lab05-placeholder; sbx exec -e DEMO_TOKEN=$P lab-05-cred sh -c 'curl -s "https://postman-echo.com/get?key=$DEMO_TOKEN" | jq -r .args.key; curl -s -d "token=$DEMO_TOKEN" https://postman-echo.com/post | jq -r .form.token'[0m
+sbx-cs-bq2udC4Et0iH4qMI
+sbx-cs-bq2udC4Et0iH4qMI
+
+[36m# A secret from a command instead of a value[0m
+[32m$ [0m[1msbx secret set-custom --sandbox lab-05-cred --host httpbin.org --env CMD_TOKEN --placeholder lab-{rand} --command 'printf %s fake-from-a-command'[0m
+]11;?[c
+[33m  warning:[m no keychain detected; this secret will be stored on disk, protected by file permissions rather than a password
+  Applied secret updates to sandbox lab-05-cred
+  Saved custom secret lab-HZXyiVZzx5DNQF3U for target httpbin.org env CMD_TOKEN (lab-05-cred)
+
+  --command custom secrets are stored and replayed by sandboxd. Put any required environment variables directly in the command or wrapper script. Avoid embedding secret values directly because command text can appear in shell history and process listings.
+
+  You may need to update environment variable CMD_TOKEN inside sandbox "lab-05-cred" to "lab-HZXyiVZzx5DNQF3U" (the placeholder value).
+
+[32m$ [0m[1mP2=$(sbx secret ls --json | jq -r '.custom_secrets[] | select(.scope == "lab-05-cred" and .env == "CMD_TOKEN") | .placeholder'); sbx exec lab-05-cred curl -s -H "Authorization: Bearer $P2" https://httpbin.org/headers | jq -r .headers.Authorization[0m
+Bearer fake-from-a-command
+[32m$ [0m[1mP2=$(sbx secret ls --json | jq -r '.custom_secrets[] | select(.scope == "lab-05-cred" and .env == "CMD_TOKEN") | .placeholder'); sbx secret rm --placeholder $P2 -f; echo "exit $?"; sbx secret ls | grep -c CMD_TOKEN[0m
+]11;?[c
+  Applied secret updates to 3 running sandboxes
+
+exit 0
+1
+
+[36m# Without --sandbox it exits 0 and removes nothing. Name the scope:[0m
+[32m$ [0m[1mP2=$(sbx secret ls --json | jq -r '.custom_secrets[] | select(.scope == "lab-05-cred" and .env == "CMD_TOKEN") | .placeholder'); sbx secret rm --placeholder $P2 --sandbox lab-05-cred -f; sbx secret ls | grep -E 'SCOPE|lab-05-cred'[0m
+]11;?[c
+[90m  SCOPE[m         [90mTARGETS[m       [90mENV[m         [90mPLACEHOLDER[m            [90mSECRET[m
+  lab-05-cred   httpbin.org   CMD_TOKEN   lab-HZXyiVZzx5DNQF3U   command:printf %s fake-from-a-command (on-demand)
+  Removed 1 custom secret for placeholder lab-HZXyiVZzx5DNQF3U (lab-05-cred)
+  Applied secret updates to sandbox lab-05-cred
+
+SCOPE      TYPE      NAME        SECRET
+SCOPE         TARGETS            ENV          PLACEHOLDER               SECRET
+lab-05-cred   postman-echo.com   DEMO_TOKEN   sbx-cs-bq2udC4Et0iH4qMI   fake-t**************-123
+
+[36m# SSH agent forwarding: the sandbox can use your keys, it never holds them[0m
+[32m$ [0m[1mD=$(mktemp -d "$XDG_RUNTIME_DIR/l05.XXXX"); eval "$(ssh-agent -a $D/a.sock)" >/dev/null; ssh-keygen -q -t ed25519 -N "" -C lab-05-throwaway -f $D/k; SSH_AUTH_SOCK=$D/a.sock ssh-add -q $D/k; SSH_AUTH_SOCK=$D/a.sock sbx exec lab-05-cred sh -c "ssh-add -l | cut -d\" \" -f3-; ls ~/.ssh"; kill $SSH_AGENT_PID; rm -rf $D[0m
+lab-05-throwaway (ED25519)
+ls: cannot access '/home/agent/.ssh': No such file or directory
+
+[36m# Clean up: rm also deletes the sandbox's secrets[0m
+[32m$ [0m[1msbx rm --force lab-05-cred; rm -f ~/.lab05-placeholder; sbx secret ls | grep lab-05-cred || echo no lab-05-cred secrets left[0m
+]11;?[c
+[?25l    [35m⠋[m removing sandbox lab-05-cred [90m(0s)[m
+[1A[K    [35m⠙[m removing sandbox lab-05-cred [90m(0s)[m
+[1A[K    [35m⠹[m removing sandbox lab-05-cred [90m(0s)[m
+[1A[K[?25h  Removed sandbox lab-05-cred
+
+no lab-05-cred secrets left
+
+Script done on 2026-10-24 15:51:44+01:00 [COMMAND_EXIT_CODE="0"]

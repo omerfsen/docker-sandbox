@@ -1,0 +1,147 @@
+Script started on 2026-10-24 15:46:27+01:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/04-l7-rules-and-approvals/solution.sh" <not executed on terminal>]
+
+[36m# Lab 04 — L7 rules and approvals[0m
+[32m$ [0m[1msbx rm --force lab-04-l7[0m
+[32m$ [0m[1msbx run -d --name lab-04-l7 shell[0m
+]11;?[c
+[94m  SANDBOX[m
+    [90mName:[m       lab-04-l7
+    [90mAgent:[m      shell
+    [90mWorkspace:[m  ~/projects/docker-sandbox-labs-03-05 (rw)
+    [90mImage:[m      docker/sandbox-templates:shell-docker
+    [90mCPU:[m        4
+    [90mMemory:[m     3.9 GiB
+
+[94m  IMAGE[m
+    [35m⠋[m image[90m — [mpulling…
+[?25l[1A[K    [35m⠙[m image[90m — [mpulling…
+[1A[K    [35m⠹[m image[90m — [mpulling…
+[1A[K    [35m⠸[m image[90m — [mpulling…
+[1A[K    [35m⠼[m image[90m — [mpulling…
+[1A[K    [35m⠴[m image[90m — [mpulling…
+[1A[K    [35m⠦[m image[90m — [mpulling…
+[1A[K    [35m⠧[m image[90m — [mpulling…
+[1A[K    [35m⠇[m image[90m — [mpulling…
+[1A[K    [35m⠏[m image[90m — [mpulling…
+[1A[K    [35m⠋[m image[90m — [mpulling…
+[1A[K    [35m⠙[m image[90m — [mpulling…
+[1A[K    [35m⠹[m image[90m — [mpulling…
+[1A[K    [35m⠸[m image[90m — [mpulling…
+[1A[K    [35m⠼[m image[90m — [mpulling…
+[1A[K    [35m⠴[m image[90m — [mpulling…
+[1A[K    [35m⠦[m image[90m — [mpulling…
+[1A[K    [35m⠧[m image[90m — [mpulling…
+[1A[K    [35m⠇[m image[90m — [mpulling…
+[1A[K    [35m⠏[m image[90m — [mpulling…
+[1A[K    [35m⠋[m image[90m — [mpulling…
+        1/1 layers · finalizing image…
+[1A[K[1A[K    [32m✓[m image[90m — [mready
+[?25h[?25h
+    [32m✓[m Created sandbox lab-04-l7
+
+    [32m✓[m sandbox lab-04-l7[90m — [mrunning detached
+        [90mworkspace /home/serra/projects/docker-sandbox-labs-03-05[m
+ac92f523-3732-4cd1-9a52-5d431a56706a
+
+
+[36m# httpbin.org is not on the Balanced list: the request waits for approval[0m
+[32m$ [0m[1msbx exec lab-04-l7 curl -s https://httpbin.org/anything[0m
+Approval required for httpbin.org:443.
+
+Review and respond with:
+  sbx policy approval ls
+[32m$ [0m[1msleep 2; sbx policy approval ls[0m
+]11;?[c
+[90m  APPROVAL[m                                              [90mSANDBOX[m     [90mTITLE[m             [90mDETAIL[m                                                                      [90mOPTIONS[m
+  network:99Ljl22mWkvPIQzLrXHYj8JbQcSRCONRZv45W_vxM6Q   lab-04-l7   httpbin.org:443   Protocol: TCP Resource type: domain no matching allow rule (default deny)   allow (Allow), dismiss (Dismiss)
+
+
+[36m# Allow only GET under /anything/ (an allow-list rule)[0m
+[32m$ [0m[1msbx policy allow network --sandbox lab-04-l7 httpbin.org --method GET --path '/anything/**'[0m
+]11;?[c
+  Added rule 8ffca69e-3ab3-4c63-af9c-6f9a5ca4be68 to policy local (scope: sandbox:lab-04-l7): GET httpbin.org/anything/**
+
+[32m$ [0m[1msleep 3; for req in "GET /anything/ok" "POST /anything/ok" "GET /headers"; do set -- $req; sbx exec lab-04-l7 curl -s -o /dev/null -w "$1 $2 %{http_code}\n" -X $1 https://httpbin.org$2; done[0m
+GET /anything/ok 200
+POST /anything/ok 403
+GET /headers 403
+
+[36m# To read the method and path, the proxy opens TLS with its own CA[0m
+[32m$ [0m[1msbx exec lab-04-l7 sh -c 'curl -sv -o /dev/null https://httpbin.org/anything/ok 2>&1 | grep issuer:; curl -sv -o /dev/null https://pypi.org 2>&1 | grep issuer:'[0m
+*   issuer: C=US; ST=; L=; street=; postalCode=; O=Docker Sandboxes; CN=Docker Sandboxes Proxy CA
+*   issuer: C=BE; O=GlobalSign nv-sa; CN=GlobalSign Atlas R3 DV TLS CA 2025 Q4
+
+[36m# Approve one request from the queue[0m
+[32m$ [0m[1msleep 2; sbx policy approval ls | cut -c1-110[0m
+APPROVAL                                              SANDBOX     TITLE                              DETAIL   
+network:99Ljl22mWkvPIQzLrXHYj8JbQcSRCONRZv45W_vxM6Q   lab-04-l7   httpbin.org:443                    Protocol:
+network:i9YFZTeQXOefSpwF1DMXJm-TmgQwMP2yXcs286gwVUQ   lab-04-l7   POST httpbin.org:443/anything/ok   Protocol:
+network:seNH16VL4JMkYrwxAJCdPqIUpRo4vl_GFG_iG3-pIP0   lab-04-l7   GET httpbin.org:443/headers        Protocol:
+[32m$ [0m[1mA=$(sbx policy approval ls --json | jq -r '.[] | select(.title == "POST httpbin.org:443/anything/ok") | .id'); sbx policy approval inspect $A && sbx policy approval respond $A --option allow[0m
+]11;?[c
+    [90m○[m APPROVAL network:i9YFZTeQXOefSpwF1DMXJm-TmgQwMP2yXcs286gwVUQ[90m — [msandbox lab-04-l7
+        [90mPOST httpbin.org:443/anything/ok[m
+        [90mProtocol: HTTP Method: POST Target scope: httpbin.org:443 Path: /anything/ok no matching allow rule (default deny)[m
+
+[90m    OPTION[m    [90mLABEL[m
+    allow     Allow
+    dismiss   Dismiss
+
+]11;?[c
+  Recorded answer Allow
+
+[32m$ [0m[1msleep 3; for p in /anything/ok /anything/other; do sbx exec lab-04-l7 curl -s -o /dev/null -w "POST $p %{http_code}\n" -X POST https://httpbin.org$p; done[0m
+POST /anything/ok 200
+POST /anything/other 403
+[32m$ [0m[1msbx policy ls --json | jq -r '.rules[] | select(.applies_to == "sandbox:lab-04-l7") | "\(.decision) \(.methods) \(.http_targets[0].host)\(.http_targets[0].path)  created via \(.provenance.created_via)"'[0m
+allow ["GET"] httpbin.org/anything/**  created via added
+allow ["POST"] httpbin.org:443/anything/ok  created via approval
+
+[36m# Dismiss is a one-time no[0m
+[32m$ [0m[1mD=$(sbx policy approval ls --json | jq -r '.[] | select(.title == "GET httpbin.org:443/headers") | .id'); sbx policy approval respond $D --option dismiss[0m
+]11;?[c
+  Recorded answer Dismiss
+
+[32m$ [0m[1msleep 2; sbx exec lab-04-l7 curl -s -o /dev/null -w "GET /headers %{http_code}\n" https://httpbin.org/headers; sbx policy approval ls | grep headers | cut -c1-110[0m
+GET /headers 403
+network:seNH16VL4JMkYrwxAJCdPqIUpRo4vl_GFG_iG3-pIP0   lab-04-l7   GET httpbin.org:443/headers           Protoc
+
+[36m# Deny-list style: allow the host, deny one method[0m
+[32m$ [0m[1msbx policy allow network --sandbox lab-04-l7 httpbin.org[0m
+]11;?[c
+  Added rule 6bab7d92-847a-4929-aefa-cdfed51cdb2d to policy local (scope: sandbox:lab-04-l7): httpbin.org [tcp]
+
+[32m$ [0m[1msleep 3; for m in POST DELETE; do sbx exec lab-04-l7 curl -s -o /dev/null -w "$m /anything/other %{http_code}\n" -X $m https://httpbin.org/anything/other; done[0m
+POST /anything/other 200
+DELETE /anything/other 200
+[32m$ [0m[1msbx policy deny network --sandbox lab-04-l7 httpbin.org --method DELETE[0m
+]11;?[c
+  Added rule ff806bc6-9db9-4973-98ee-e55de4ebe2c5 to policy local (scope: sandbox:lab-04-l7): DELETE httpbin.org/**
+
+[32m$ [0m[1msleep 3; for m in POST DELETE; do sbx exec lab-04-l7 curl -s -o /dev/null -w "$m /anything/other %{http_code}\n" -X $m https://httpbin.org/anything/other; done[0m
+POST /anything/other 200
+DELETE /anything/other 403
+
+[36m# policy check evaluates the connection, not the HTTP request[0m
+[32m$ [0m[1msbx policy check network --sandbox lab-04-l7 https://httpbin.org/anything/ok[0m
+]11;?[c
+    [90mHTTP authorization required:[m  httpbin.org:443
+    [90mGovernance:[m                   Local policy only
+    [90mContext:[m                      sandbox:lab-04-l7
+    [90mReason:[m                       authorization required by policy
+
+[2m[exit 1][0m
+
+[36m# Clean up: rm also clears the sandbox's rules and pending approvals[0m
+[32m$ [0m[1msbx rm --force lab-04-l7; sbx policy approval ls[0m
+]11;?[c
+[?25l    [35m⠋[m removing sandbox lab-04-l7 [90m(0s)[m
+[1A[K    [35m⠙[m removing sandbox lab-04-l7 [90m(0s)[m
+[1A[K    [35m⠹[m removing sandbox lab-04-l7 [90m(0s)[m
+[1A[K[?25h  Removed sandbox lab-04-l7
+
+
+  No pending approvals.
+]11;?[c
+
+Script done on 2026-10-24 15:49:08+01:00 [COMMAND_EXIT_CODE="0"]

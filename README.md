@@ -64,9 +64,9 @@ All commands run from the repository root.
 | 00 | [Prepare a fresh Ubuntu 24.04 host](labs/00-prepare-ubuntu/README.md) | KVM, the `kvm` group and why you must log out, host check | Platform requirements |
 | 01 | [Install sbx and sign in](labs/01-install-and-sign-in/README.md) | Pinned apt install, `login`, `policy init`, `setup`, the daemon, `diagnose` | CLI, daemon, packaging |
 | 02 | [Sandbox basics](labs/02-sandbox-basics/README.md) | create / run / exec / ls / stop / cp / rm, idle stop, workspaces | Sandbox lifecycle |
-| 03 | Default-deny networking *(coming)* | Balanced vs deny-all, the policy log, bypass attempts that fail | Network policy |
-| 04 | L7 rules and approvals *(coming)* | Method and path rules, the approval queue, `policy check` | HTTP policy |
-| 05 | Credentials the agent never sees *(coming)* | `sbx secret`, placeholders swapped only for the bound host | Secret injection |
+| 03 | [Default-deny networking](labs/03-network-default-deny/README.md) | Balanced vs deny-all, the policy log, bypass attempts that fail | Network policy |
+| 04 | [L7 rules and approvals](labs/04-l7-rules-and-approvals/README.md) | Method and path rules, the approval queue, `policy check` | HTTP policy |
+| 05 | [Credentials the agent never sees](labs/05-credentials/README.md) | `sbx secret`, placeholders swapped only for the bound host | Secret injection |
 | 06 | Capstone: run Claude Code *(coming)* | A real agent in a sandbox under policy | Everything together |
 | 07 | Clean up *(coming)* | rm, prune, secrets, reset, logout | Operations |
 
