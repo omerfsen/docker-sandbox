@@ -32,9 +32,12 @@ narrow rule for exactly that request) or dismiss it.
 httpbin.org is not on the Balanced list:
 
 ```shell
-sbx run -d --name lab-04-l7 shell
+sbx create --name lab-04-l7 shell && sbx run -d --name lab-04-l7
 sbx exec lab-04-l7 curl -s https://httpbin.org/anything
 ```
+
+(Create first, then start detached: `sbx run` without a path would mount your current directory,
+see Lab 02.)
 
 ```text
 Approval required for httpbin.org:443.

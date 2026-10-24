@@ -1,13 +1,13 @@
-Script started on 2026-10-24 15:46:27+01:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/04-l7-rules-and-approvals/solution.sh" <not executed on terminal>]
+Script started on 2026-10-24 16:14:30+01:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/04-l7-rules-and-approvals/solution.sh" <not executed on terminal>]
 
 [36m# Lab 04 — L7 rules and approvals[0m
 [32m$ [0m[1msbx rm --force lab-04-l7[0m
-[32m$ [0m[1msbx run -d --name lab-04-l7 shell[0m
+[32m$ [0m[1msbx create --name lab-04-l7 shell && sbx run -d --name lab-04-l7[0m
 ]11;?[c
 [94m  SANDBOX[m
     [90mName:[m       lab-04-l7
     [90mAgent:[m      shell
-    [90mWorkspace:[m  ~/projects/docker-sandbox-labs-03-05 (rw)
+    [90mWorkspace:[m  none · no workspace bind mount
     [90mImage:[m      docker/sandbox-templates:shell-docker
     [90mCPU:[m        4
     [90mMemory:[m     3.9 GiB
@@ -21,27 +21,15 @@ Script started on 2026-10-24 15:46:27+01:00 [COMMAND="stty cols 110 rows 32 2>/d
 [1A[K    [35m⠴[m image[90m — [mpulling…
 [1A[K    [35m⠦[m image[90m — [mpulling…
 [1A[K    [35m⠧[m image[90m — [mpulling…
-[1A[K    [35m⠇[m image[90m — [mpulling…
-[1A[K    [35m⠏[m image[90m — [mpulling…
-[1A[K    [35m⠋[m image[90m — [mpulling…
-[1A[K    [35m⠙[m image[90m — [mpulling…
-[1A[K    [35m⠹[m image[90m — [mpulling…
-[1A[K    [35m⠸[m image[90m — [mpulling…
-[1A[K    [35m⠼[m image[90m — [mpulling…
-[1A[K    [35m⠴[m image[90m — [mpulling…
-[1A[K    [35m⠦[m image[90m — [mpulling…
-[1A[K    [35m⠧[m image[90m — [mpulling…
-[1A[K    [35m⠇[m image[90m — [mpulling…
-[1A[K    [35m⠏[m image[90m — [mpulling…
-[1A[K    [35m⠋[m image[90m — [mpulling…
-        1/1 layers · finalizing image…
-[1A[K[1A[K    [32m✓[m image[90m — [mready
+[1A[K    [32m✓[m image[90m — [mready
 [?25h[?25h
     [32m✓[m Created sandbox lab-04-l7
+[34m        try:[m sbx run --name lab-04-l7
 
+]11;?[c
     [32m✓[m sandbox lab-04-l7[90m — [mrunning detached
-        [90mworkspace /home/serra/projects/docker-sandbox-labs-03-05[m
-ac92f523-3732-4cd1-9a52-5d431a56706a
+        [90mworkspace none · no workspace bind mount[m
+7ba269cf-f0eb-46e4-9409-ab4793546e85
 
 
 [36m# httpbin.org is not on the Balanced list: the request waits for approval[0m
@@ -59,7 +47,7 @@ Review and respond with:
 [36m# Allow only GET under /anything/ (an allow-list rule)[0m
 [32m$ [0m[1msbx policy allow network --sandbox lab-04-l7 httpbin.org --method GET --path '/anything/**'[0m
 ]11;?[c
-  Added rule 8ffca69e-3ab3-4c63-af9c-6f9a5ca4be68 to policy local (scope: sandbox:lab-04-l7): GET httpbin.org/anything/**
+  Added rule a4dbde2f-63e0-4107-bacf-562b6a717350 to policy local (scope: sandbox:lab-04-l7): GET httpbin.org/anything/**
 
 [32m$ [0m[1msleep 3; for req in "GET /anything/ok" "POST /anything/ok" "GET /headers"; do set -- $req; sbx exec lab-04-l7 curl -s -o /dev/null -w "$1 $2 %{http_code}\n" -X $1 https://httpbin.org$2; done[0m
 GET /anything/ok 200
@@ -109,14 +97,14 @@ network:seNH16VL4JMkYrwxAJCdPqIUpRo4vl_GFG_iG3-pIP0   lab-04-l7   GET httpbin.or
 [36m# Deny-list style: allow the host, deny one method[0m
 [32m$ [0m[1msbx policy allow network --sandbox lab-04-l7 httpbin.org[0m
 ]11;?[c
-  Added rule 6bab7d92-847a-4929-aefa-cdfed51cdb2d to policy local (scope: sandbox:lab-04-l7): httpbin.org [tcp]
+  Added rule 64dcd7fb-f4ee-456d-b77e-32a1df3d456f to policy local (scope: sandbox:lab-04-l7): httpbin.org [tcp]
 
 [32m$ [0m[1msleep 3; for m in POST DELETE; do sbx exec lab-04-l7 curl -s -o /dev/null -w "$m /anything/other %{http_code}\n" -X $m https://httpbin.org/anything/other; done[0m
 POST /anything/other 200
 DELETE /anything/other 200
 [32m$ [0m[1msbx policy deny network --sandbox lab-04-l7 httpbin.org --method DELETE[0m
 ]11;?[c
-  Added rule ff806bc6-9db9-4973-98ee-e55de4ebe2c5 to policy local (scope: sandbox:lab-04-l7): DELETE httpbin.org/**
+  Added rule dde4f724-defb-4b94-86c7-bf40acf4b811 to policy local (scope: sandbox:lab-04-l7): DELETE httpbin.org/**
 
 [32m$ [0m[1msleep 3; for m in POST DELETE; do sbx exec lab-04-l7 curl -s -o /dev/null -w "$m /anything/other %{http_code}\n" -X $m https://httpbin.org/anything/other; done[0m
 POST /anything/other 200
@@ -144,4 +132,4 @@ DELETE /anything/other 403
   No pending approvals.
 ]11;?[c
 
-Script done on 2026-10-24 15:49:08+01:00 [COMMAND_EXIT_CODE="0"]
+Script done on 2026-10-24 16:17:09+01:00 [COMMAND_EXIT_CODE="0"]

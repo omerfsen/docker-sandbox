@@ -4,7 +4,7 @@ source "$(dirname "$0")/../../scripts/autoplay.sh"
 
 say "Lab 05 — Credentials the agent never sees"
 run_quiet 'sbx rm --force lab-05-cred'
-run 'sbx run -d --name lab-05-cred shell && sbx policy allow network --sandbox lab-05-cred postman-echo.com,httpbin.org'
+run 'sbx create --name lab-05-cred shell && sbx run -d --name lab-05-cred && sbx policy allow network --sandbox lab-05-cred postman-echo.com,httpbin.org'
 say "Store a secret bound to one host (a fake value: never put a real one in a recording)"
 run 'sbx secret set-custom --sandbox lab-05-cred --host postman-echo.com --env DEMO_TOKEN --value fake-training-secret-123'
 run "sbx secret ls | grep -E 'SCOPE|lab-05-cred'"

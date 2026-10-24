@@ -4,7 +4,7 @@ source "$(dirname "$0")/../../scripts/autoplay.sh"
 
 say "Lab 04 — L7 rules and approvals"
 run_quiet 'sbx rm --force lab-04-l7'
-run 'sbx run -d --name lab-04-l7 shell'
+run 'sbx create --name lab-04-l7 shell && sbx run -d --name lab-04-l7'
 say "httpbin.org is not on the Balanced list: the request waits for approval"
 run 'sbx exec lab-04-l7 curl -s https://httpbin.org/anything'
 run 'sleep 2; sbx policy approval ls'

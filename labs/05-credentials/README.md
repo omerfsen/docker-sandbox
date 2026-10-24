@@ -32,7 +32,7 @@ you record or share. `--value` also lands in your shell history; `--command` and
 ## 1. Store a secret for one host
 
 ```shell
-sbx run -d --name lab-05-cred shell && sbx policy allow network --sandbox lab-05-cred postman-echo.com,httpbin.org
+sbx create --name lab-05-cred shell && sbx run -d --name lab-05-cred && sbx policy allow network --sandbox lab-05-cred postman-echo.com,httpbin.org
 sbx secret set-custom --sandbox lab-05-cred --host postman-echo.com --env DEMO_TOKEN --value fake-training-secret-123
 ```
 
