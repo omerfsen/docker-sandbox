@@ -1,0 +1,132 @@
+Script started on 2026-10-24 15:43:38+01:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/03-network-default-deny/solution.sh" <not executed on terminal>]
+
+[36m# Lab 03 — Default-deny networking[0m
+[32m$ [0m[1msbx rm --force lab-03-net; rm -rf ~/sbx-labs/03[0m
+[32m$ [0m[1mmkdir -p ~/sbx-labs/03 && sbx run -d --name lab-03-net shell ~/sbx-labs/03[0m
+]11;?[c
+[94m  SANDBOX[m
+    [90mName:[m       lab-03-net
+    [90mAgent:[m      shell
+    [90mWorkspace:[m  ~/sbx-labs/03 (rw)
+    [90mImage:[m      docker/sandbox-templates:shell-docker
+    [90mCPU:[m        4
+    [90mMemory:[m     3.9 GiB
+
+[94m  IMAGE[m
+    [35m⠋[m image[90m — [mpulling…
+[?25l[1A[K    [35m⠙[m image[90m — [mpulling…
+[1A[K    [35m⠹[m image[90m — [mpulling…
+[1A[K    [35m⠸[m image[90m — [mpulling…
+[1A[K    [35m⠼[m image[90m — [mpulling…
+[1A[K    [35m⠴[m image[90m — [mpulling…
+[1A[K    [35m⠦[m image[90m — [mpulling…
+[1A[K    [35m⠧[m image[90m — [mpulling…
+[1A[K    [35m⠇[m image[90m — [mpulling…
+        6/6 layers · finalizing image…
+[1A[K[1A[K    [32m✓[m image[90m — [mready
+[?25h[?25h
+    [32m✓[m Created sandbox lab-03-net
+
+    [32m✓[m sandbox lab-03-net[90m — [mrunning detached
+        [90mworkspace /home/serra/sbx-labs/03[m
+dd02f5a5-c4c3-4190-b2f3-f276bfd826a2
+
+
+[36m# Balanced: registries and AI providers yes, everything else no[0m
+[32m$ [0m[1mfor url in https://pypi.org https://example.com https://postman-echo.com/get http://169.254.169.254/; do sbx exec lab-03-net curl -s -o /dev/null -w "$url %{http_code}\n" --max-time 10 $url; done[0m
+https://pypi.org 200
+https://example.com 403
+https://postman-echo.com/get 403
+http://169.254.169.254/ 403
+[32m$ [0m[1msleep 2; sbx policy log lab-03-net --json | jq -r '(.blocked[:3][] | "DENY   \(.host)  \(.reason)"), (.allowed[] | select(.host == "pypi.org:443") | "ALLOW  \(.host)  \(.proxy_type)")'[0m
+DENY   169.254.169.254:80  No matching allow rule (default deny)
+DENY   postman-echo.com:443  No matching allow rule (default deny)
+DENY   example.com:443  No matching allow rule (default deny)
+ALLOW  pypi.org:443  forward-bypass
+
+[36m# How: every program is pointed at the daemon's proxy[0m
+[32m$ [0m[1msbx exec lab-03-net sh -c 'env | grep -i ^https_proxy'[0m
+HTTPS_PROXY=http://gateway.docker.internal:3128
+https_proxy=http://gateway.docker.internal:3128
+
+[36m# Going around the proxy does not work[0m
+[32m$ [0m[1msbx exec lab-03-net curl -sS --noproxy '*' --max-time 8 -o /dev/null https://example.com[0m
+curl: (6) Could not resolve host: example.com
+[2m[exit 6][0m
+[32m$ [0m[1msbx exec lab-03-net sh -c 'getent hosts example.com || echo no DNS answer for example.com; getent hosts pypi.org | head -1'[0m
+no DNS answer for example.com
+2a04:4e42:400::223 pypi.org
+[32m$ [0m[1msbx exec lab-03-net curl -sS --noproxy '*' --max-time 8 -o /dev/null https://1.1.1.1[0m
+curl: (35) TLS connect error: error:0A000126:SSL routines::unexpected eof while reading
+[2m[exit 35][0m
+[32m$ [0m[1mIP=$(getent ahostsv4 tcpbin.com | awk "NR==1{print \$1}"); echo "host reply: [$(echo hello | nc -q2 $IP 4242)]"; sbx exec lab-03-net bash -c "exec 3<>/dev/tcp/$IP/4242 && echo connected to $IP:4242; echo hello >&3; echo sandbox reply: [\$(timeout 5 head -1 <&3)]"[0m
+host reply: [hello]
+connected to 45.79.112.203:4242
+sandbox reply: []
+[32m$ [0m[1msleep 2; sbx policy log lab-03-net --json | jq -r '.blocked[:4][] | "\(.last_seen[11:19])  \(.proxy_type)  \(.host)  \(.reason)"'[0m
+15:44:53  transparent  45.79.112.203:4242  No matching allow rule (default deny)
+15:44:40  transparent  1.1.1.1:443  No matching allow rule (default deny)
+15:44:34  network  example.com.lab-03-net.docker.internal  DNS lookup blocked by proxy policy
+15:44:34  network  example.com  DNS lookup blocked by proxy policy
+
+[36m# Open one host for this sandbox only[0m
+[32m$ [0m[1msbx policy allow network --sandbox lab-03-net postman-echo.com[0m
+]11;?[c
+  Added rule cdb0f840-e9b3-4cd2-b451-60f18d0a1898 to policy local (scope: sandbox:lab-03-net): postman-echo.com [tcp]
+
+[32m$ [0m[1msleep 3; sbx exec lab-03-net curl -s -o /dev/null -w "%{http_code}\n" https://postman-echo.com/get[0m
+200
+[32m$ [0m[1msbx policy check network postman-echo.com; sbx policy check network --sandbox lab-03-net postman-echo.com[0m
+]11;?[c
+    [90mDenied:[m      postman-echo.com:443
+    [90mGovernance:[m  Local policy only
+    [90mContext:[m     global
+    [90mReason:[m      no matching allow rule (default deny)
+
+]11;?[c
+    [90mAllowed:[m     postman-echo.com:443
+    [90mGovernance:[m  Local policy only
+    [90mContext:[m     sandbox:lab-03-net
+
+
+[36m# No per-program rules: python gets the same answer (with a normal User-Agent)[0m
+[32m$ [0m[1msbx exec lab-03-net python3 -c 'import urllib.request as u; print(u.urlopen(u.Request("https://postman-echo.com/get", headers={"User-Agent": "curl/8"}), timeout=10).status)'[0m
+200
+[32m$ [0m[1msbx exec lab-03-net curl -sS -A 'Python-urllib/3.14' https://postman-echo.com/get; echo[0m
+error code: 1010
+
+
+[36m# Deny-all for one sandbox: deny beats allow[0m
+[32m$ [0m[1msbx policy deny network --sandbox lab-03-net '**'[0m
+]11;?[c
+[33m  warning:[m UDP rule saved, but UDP egress is disabled; enable experimental features and feature.udp-egress to use UDP
+  Added rule d5913103-bc13-4e79-ac83-3f5bb71ba693 to policy local (scope: sandbox:lab-03-net): ** [tcp,udp]
+
+[32m$ [0m[1msleep 3; for url in https://pypi.org https://postman-echo.com/get; do sbx exec lab-03-net curl -s -o /dev/null -w "$url %{http_code}\n" --max-time 10 $url; done[0m
+https://pypi.org 403
+https://postman-echo.com/get 403
+[32m$ [0m[1msbx policy ls --json | jq -r '.rules[] | select(.applies_to == "sandbox:lab-03-net") | "\(.decision)  \(.resources | join(","))"'[0m
+allow  postman-echo.com
+deny  **
+
+[36m# Remove the rules again[0m
+[32m$ [0m[1msbx policy rm network --sandbox lab-03-net --resource '**' --force; sbx policy rm network --sandbox lab-03-net --resource postman-echo.com --force[0m
+]11;?[c
+  Removed rule from policy local: resources=**
+
+]11;?[c
+  Removed rule from policy local: resources=postman-echo.com
+
+[32m$ [0m[1msleep 3; sbx exec lab-03-net curl -s -o /dev/null -w "%{http_code}\n" https://postman-echo.com/get[0m
+403
+
+[36m# Clean up[0m
+[32m$ [0m[1msbx rm --force lab-03-net; rm -rf ~/sbx-labs/03[0m
+]11;?[c
+[?25l    [35m⠋[m removing sandbox lab-03-net [90m(0s)[m
+[1A[K    [35m⠙[m removing sandbox lab-03-net [90m(0s)[m
+[1A[K    [35m⠹[m removing sandbox lab-03-net [90m(0s)[m
+[1A[K[?25h  Removed sandbox lab-03-net
+
+
+Script done on 2026-10-24 15:46:27+01:00 [COMMAND_EXIT_CODE="0"]

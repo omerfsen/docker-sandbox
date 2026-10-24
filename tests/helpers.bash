@@ -64,3 +64,14 @@ delete_sandbox() {
     sleep 1
   done
 }
+
+# Succeeds once `sbx policy log NAME` has a line matching an extended regex.
+# The proxy writes its log asynchronously, so poll for a few seconds.
+log_has() {
+  local name="$1" pattern="$2"
+  EVENTUALLY_TRIES=8 EVENTUALLY_DELAY=2 eventually _log_matches "$name" "$pattern"
+}
+
+_log_matches() {
+  sbx policy log "$1" 2>/dev/null | grep -qE "$2"
+}

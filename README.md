@@ -64,11 +64,11 @@ All commands run from the repository root.
 | 00 | [Prepare a fresh Ubuntu 24.04 host](labs/00-prepare-ubuntu/README.md) | KVM, the `kvm` group and why you must log out, host check | Platform requirements |
 | 01 | [Install sbx and sign in](labs/01-install-and-sign-in/README.md) | Pinned apt install, `login`, `policy init`, `setup`, the daemon, `diagnose` | CLI, daemon, packaging |
 | 02 | [Sandbox basics](labs/02-sandbox-basics/README.md) | create / run / exec / ls / stop / cp / rm, idle stop, workspaces | Sandbox lifecycle |
-| 03 | Default-deny networking *(coming)* | Balanced vs deny-all, the policy log, bypass attempts that fail | Network policy |
-| 04 | L7 rules and approvals *(coming)* | Method and path rules, the approval queue, `policy check` | HTTP policy |
-| 05 | Credentials the agent never sees *(coming)* | `sbx secret`, placeholders swapped only for the bound host | Secret injection |
-| 06 | Capstone: run Claude Code *(coming)* | A real agent in a sandbox under policy | Everything together |
-| 07 | Clean up *(coming)* | rm, prune, secrets, reset, logout | Operations |
+| 03 | [Default-deny networking](labs/03-network-default-deny/README.md) | Balanced vs deny-all, the policy log, bypass attempts that fail | Network policy |
+| 04 | [L7 rules and approvals](labs/04-l7-rules-and-approvals/README.md) | Method and path rules, the approval queue, `policy check` | HTTP policy |
+| 05 | [Credentials the agent never sees](labs/05-credentials/README.md) | `sbx secret`, placeholders swapped only for the bound host | Secret injection |
+| 06 | [Capstone: run Claude Code](labs/06-run-claude-code/README.md) | A real agent in a sandbox under policy | Everything together |
+| 07 | [Clean up](labs/07-cleanup/README.md) | rm, prune, secrets, reset, logout | Operations |
 
 Time: about **2–3 hours** in total.
 
@@ -117,6 +117,10 @@ other sandboxes are left alone.
 - **`script` / `scriptreplay`** (util-linux, preinstalled): records and replays the solutions.
 - **[asciinema](https://asciinema.org)** (`sudo apt install asciinema`, optional): plays the
   `.cast` recordings, which also embed on the web.
+
+The checks use public echo services (`postman-echo.com`, `httpbin.org`, `tcpbin.com`) as safe
+targets, so you need outbound internet access. Lab 06's Claude checks run only when an
+`anthropic` secret is stored, and spend a few cents.
 
 ## References
 

@@ -1,0 +1,103 @@
+Script started on 2026-10-24 16:03:23+01:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/06-run-claude-code/solution.sh" <not executed on terminal>]
+
+[36m# Lab 06 — Capstone: run Claude Code[0m
+[32m$ [0m[1msbx rm --force lab-06-agent; rm -rf ~/sbx-labs/06[0m
+
+[36m# Stored once on the host: printf %s "$ANTHROPIC_API_KEY" | sbx secret set anthropic[0m
+[32m$ [0m[1msbx secret ls | grep -E "SCOPE|anthropic"[0m
+SCOPE      TYPE      NAME        SECRET
+(global)   service   anthropic   (stored)
+SCOPE      TARGETS            ENV          PLACEHOLDER               SECRET
+[32m$ [0m[1mmkdir -p ~/sbx-labs/06 && printf 'def add(a, b):\n    return a - b\n\n\nif __name__ == "__main__":\n    print(add(2, 3))\n' > ~/sbx-labs/06/calc.py && cat ~/sbx-labs/06/calc.py[0m
+def add(a, b):
+    return a - b
+
+
+if __name__ == "__main__":
+    print(add(2, 3))
+[32m$ [0m[1msbx run -d --name lab-06-agent claude ~/sbx-labs/06[0m
+]11;?[c
+[94m  SANDBOX[m
+    [90mName:[m       lab-06-agent
+    [90mAgent:[m      claude
+    [90mWorkspace:[m  ~/sbx-labs/06 (rw)
+    [90mSkills:[m     0 entries · linked, read-only
+      [90mSource:[m   ~/.local/state/sandboxes/sandboxes/agent-skills
+      [90mTarget:[m   /home/agent/.claude/skills
+    [90mImage:[m      docker/sandbox-templates:claude-code-docker
+    [90mCPU:[m        4
+    [90mMemory:[m     3.9 GiB
+
+[94m  IMAGE[m
+    [35m⠋[m image[90m — [mpulling…
+[?25l[1A[K    [35m⠙[m image[90m — [mpulling…
+[1A[K    [35m⠹[m image[90m — [mpulling…
+[1A[K    [35m⠸[m image[90m — [mpulling…
+[1A[K    [35m⠼[m image[90m — [mpulling…
+[1A[K    [35m⠴[m image[90m — [mpulling…
+[1A[K    [35m⠦[m image[90m — [mpulling…
+[1A[K    [35m⠧[m image[90m — [mpulling…
+[1A[K    [35m⠇[m image[90m — [mpulling…
+[1A[K    [32m✓[m image[90m — [mready
+[?25h[?25h
+    [32m✓[m Created sandbox lab-06-agent
+
+    [32m✓[m sandbox lab-06-agent[90m — [mrunning detached
+        [90mworkspace /home/serra/sbx-labs/06[m
+99311bfb-a869-4327-99e7-065e39135480
+
+
+[36m# What the agent gets: no key, a helper that says proxy-managed, no permission prompts[0m
+[32m$ [0m[1msbx exec lab-06-agent sh -c 'claude --version; echo "ANTHROPIC_API_KEY=[$ANTHROPIC_API_KEY]"; jq -c "{apiKeyHelper, permissions}" ~/.claude/settings.json'[0m
+2.1.306 (Claude Code)
+ANTHROPIC_API_KEY=[]
+{"apiKeyHelper":"echo proxy-managed","permissions":{"defaultMode":"bypassPermissions"}}
+[32m$ [0m[1msbx policy ls --json | jq -r '.rules[] | select(.applies_to == "sandbox:lab-06-agent") | "\(.decision) via \(.provenance.created_via): \(.resources | join(", "))"'[0m
+allow via provisioned: api.anthropic.com:443, platform.claude.com:443, downloads.claude.ai:443, claude.com:443, code.claude.com:443, mcp-proxy.anthropic.com:443, bridge.claudeusercontent.com:443
+
+[36m# A real task: fix a bug, then try a host the policy does not allow[0m
+[32m$ [0m[1msbx exec lab-06-agent claude -p 'Fix the bug in calc.py so add() adds, run it to show the result, then run: curl -sS -m 10 -o /dev/null -w "%{http_code}\n" https://example.org and report the status code. Be brief.' < /dev/null[0m
+I fixed `calc.py` by changing `a - b` to `a + b`. Running it now prints `add(2, 3)` = **5**.
+
+The curl to example.org returned **403**. That's the sandbox firewall blocking it, not the site: the response says "Approval required for example.org:443." To allow it, run this on your host, then approve the pending request:
+
+```
+sbx policy approval ls
+sbx policy approval respond <approval-id> --option <option-id>
+```
+[32m$ [0m[1mhead -2 ~/sbx-labs/06/calc.py[0m
+def add(a, b):
+    return a + b
+[32m$ [0m[1msbx policy log lab-06-agent --json | jq -r '(.allowed[] | select(.host | test("anthropic")) | "ALLOW \(.host) \(.proxy_type)"), (.blocked[:1][] | "DENY  \(.host) \(.reason)")'[0m
+ALLOW api.anthropic.com:443 forward
+DENY  example.org:443 No matching allow rule (default deny)
+
+[36m# The agent cannot read the key, but anything in the sandbox can use it[0m
+[32m$ [0m[1msbx exec lab-06-agent sh -c 'curl -s -H "anthropic-version: 2023-06-01" -H "x-api-key: obviously-wrong" https://api.anthropic.com/v1/models | jq -r "\"models listed: \(.data | length)\""'[0m
+models listed: 14
+
+[36m# Grant what the agent asked for, from the approval queue[0m
+[32m$ [0m[1msbx policy approval ls | cut -c1-110[0m
+APPROVAL                                              SANDBOX        TITLE             DETAIL                 
+network:7PBOes_MFzzwqgFT8v-lDOMORFD9bmW1dS863wiwDZs   lab-06-agent   example.org:443   Protocol: TCP Resource 
+[32m$ [0m[1mA=$(sbx policy approval ls --json | jq -r '.[] | select(.title == "example.org:443" and .sandbox_name == "lab-06-agent") | .id'); sbx policy approval respond $A --option allow[0m
+]11;?[c
+  Recorded answer Allow
+
+[32m$ [0m[1msleep 3; sbx exec lab-06-agent curl -s -o /dev/null -w "example.org %{http_code}\n" https://example.org[0m
+example.org 200
+
+[36m# Interactive: sbx run --name lab-06-agent attaches you to Claude Code inside the sandbox[0m
+
+[36m# Clean up[0m
+[32m$ [0m[1msbx rm --force lab-06-agent; rm -rf ~/sbx-labs/06[0m
+]11;?[c
+[?25l    [35m⠋[m removing sandbox lab-06-agent [90m(0s)[m
+[1A[K    [35m⠙[m removing sandbox lab-06-agent [90m(0s)[m
+[1A[K    [35m⠹[m removing sandbox lab-06-agent [90m(0s)[m
+[1A[K    [35m⠸[m removing sandbox lab-06-agent [90m(0s)[m
+[1A[K    [35m⠼[m removing sandbox lab-06-agent [90m(0s)[m
+[1A[K[?25h  Removed sandbox lab-06-agent
+
+
+Script done on 2026-10-24 16:05:34+01:00 [COMMAND_EXIT_CODE="0"]
