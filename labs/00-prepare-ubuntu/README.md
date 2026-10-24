@@ -18,7 +18,7 @@ inside its daemon, and sandboxes never show up in `docker ps`.
 | Ubuntu | 24.04 LTS, x86_64 or arm64 | The `docker-sbx` package the course pins is built for it |
 | CPU virtualization | `vmx` (Intel) or `svm` (AMD) flag, `/dev/kvm` present | Every sandbox is a KVM microVM |
 | Group | your user in `kvm` | `/dev/kvm` is `root:kvm 0660` |
-| CPU / RAM / disk | 2 vCPU / 4 GB / 20 GB minimum; **4 vCPU / 8 GB / 30 GB recommended** | By default a sandbox gets every host CPU and half the host RAM. An agent image needs a few GB of disk. The headroom is for a real agent in Lab 17. |
+| CPU / RAM / disk | 2 vCPU / 4 GB / 20 GB minimum; **4 vCPU / 8 GB / 30 GB recommended** | By default a sandbox gets every host CPU and half the host RAM. An agent image needs a few GB of disk. The headroom is for a real agent in Lab 06. |
 
 ## 1. Create the machine
 

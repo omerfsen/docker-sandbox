@@ -115,7 +115,8 @@ host on /home/serra/sbx-labs/02 type virtiofs (rw,nosuid,nodev,relatime)
 
 The workspace is shared live with **virtiofs**. Whatever the agent writes there is on your disk
 at once. Nothing else from your home directory is visible inside: no `~/.ssh`, no `~/.aws`.
-Lab 06 looks at this boundary closely.
+The VM and this one shared folder are the whole filesystem boundary: sbx has no per-path rules
+like OpenShell's Landlock policy.
 
 ## 4. Not root, but root is close
 
@@ -301,7 +302,7 @@ rm -rf ~/sbx-labs/02 ~/sbx-labs/02-out
 
 `sbx rm` asks for confirmation. From a script it refuses with
 `error: stdin is not a terminal; use --force to skip confirmation`, so scripts use
-`sbx rm --force`. Removing a sandbox also deletes secrets scoped to it (Lab 08).
+`sbx rm --force`. Removing a sandbox also deletes secrets scoped to it (Lab 05).
 
 ## Exercises
 
@@ -329,4 +330,4 @@ labs/02-sandbox-basics/solution.sh   # replay it live against your own daemon (P
 bats labs/02-sandbox-basics/test.bats
 ```
 
-**Next:** Lab 03 — Templates: bring your own image (coming in the next part of the course)
+**Next:** Lab 03 — Default-deny networking (coming in the next part of the course)

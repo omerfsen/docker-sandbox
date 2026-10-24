@@ -25,7 +25,7 @@ the daemon and the whole installation.
 - **microVM**: each sandbox is a small KVM virtual machine with its own kernel. The container
   image for the agent runs inside it.
 - **Global network policy**: the default rule set for every sandbox's outbound traffic. You
-  pick one once: `allow-all`, `balanced`, or `deny-all`. Lab 04 goes deep on it.
+  pick one once: `allow-all`, `balanced`, or `deny-all`. Lab 03 goes deep on it.
 
 Compared with OpenShell, the daemon plays the role of the gateway and the supervisor together,
 and the microVM plays the role of the Landlock + seccomp workload.
@@ -129,7 +129,7 @@ sbx policy init balanced
 
 `balanced` denies everything except a long allow list of AI providers, package registries,
 GitHub, Docker Hub and cloud storage. Initialization is a one-time step; `sbx policy reset`
-starts over. Lab 04 compares it with `deny-all`.
+starts over. Lab 03 compares it with `deny-all`.
 
 ## 4. See what sbx detected
 
@@ -165,7 +165,7 @@ GOVERNANCE
 
 Note **SSH AGENT: Enabled**. With forwarding on, code inside a sandbox can ask your host SSH
 agent to sign things with your keys (it never gets the keys themselves). That is convenient
-for `git push` and is also a real grant of power. Lab 08 comes back to it.
+for `git push` and is also a real grant of power. Lab 05 comes back to it.
 
 ## 5. Meet the daemon
 
