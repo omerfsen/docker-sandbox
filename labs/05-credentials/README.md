@@ -240,4 +240,4 @@ labs/05-credentials/solution.sh   # replay it live against your own daemon (PAUS
 bats labs/05-credentials/test.bats
 ```
 
-**Next:** Lab 06 — Capstone: run Claude Code (coming in the next part of the course)
+**Next:** [Lab 06 — Capstone: run Claude Code](../06-run-claude-code/README.md)

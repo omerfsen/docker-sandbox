@@ -1,0 +1,104 @@
+Script started on 2026-10-24 16:22:34+01:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/07-cleanup/solution.sh" <not executed on terminal>]
+
+[36m# Lab 07 — Clean up[0m
+
+[36m# Two leftovers to clean: one running, one stopped[0m
+[32m$ [0m[1msbx rm --force lab-07-a lab-07-b[0m
+[32m$ [0m[1msbx create --name lab-07-a shell && sbx run -d --name lab-07-a && sbx create --name lab-07-b shell && sbx stop lab-07-b[0m
+]11;?[c
+[94m  SANDBOX[m
+    [90mName:[m       lab-07-a
+    [90mAgent:[m      shell
+    [90mWorkspace:[m  none · no workspace bind mount
+    [90mImage:[m      docker/sandbox-templates:shell-docker
+    [90mCPU:[m        4
+    [90mMemory:[m     3.9 GiB
+
+[94m  IMAGE[m
+    [35m⠋[m image[90m — [mpulling…
+[?25l[1A[K    [35m⠙[m image[90m — [mpulling…
+[1A[K    [35m⠹[m image[90m — [mpulling…
+[1A[K    [35m⠸[m image[90m — [mpulling…
+[1A[K    [35m⠼[m image[90m — [mpulling…
+[1A[K    [35m⠴[m image[90m — [mpulling…
+[1A[K    [35m⠦[m image[90m — [mpulling…
+[1A[K    [35m⠧[m image[90m — [mpulling…
+[1A[K    [35m⠇[m image[90m — [mpulling…
+        7/7 layers · finalizing image…
+[1A[K[1A[K    [32m✓[m image[90m — [mready
+[?25h[?25h
+    [32m✓[m Created sandbox lab-07-a
+[34m        try:[m sbx run --name lab-07-a
+
+]11;?[c
+    [32m✓[m sandbox lab-07-a[90m — [mrunning detached
+        [90mworkspace none · no workspace bind mount[m
+a4efd822-68f5-4b74-baf6-6b8a3b4badea
+
+]11;?[c
+[94m  SANDBOX[m
+    [90mName:[m       lab-07-b
+    [90mAgent:[m      shell
+    [90mWorkspace:[m  none · no workspace bind mount
+    [90mImage:[m      docker/sandbox-templates:shell-docker
+    [90mCPU:[m        4
+    [90mMemory:[m     3.9 GiB
+
+[94m  IMAGE[m
+    [35m⠋[m image[90m — [mpulling…
+[?25l[1A[K    [35m⠙[m image[90m — [mpulling…
+[1A[K    [35m⠹[m image[90m — [mpulling…
+[1A[K    [35m⠸[m image[90m — [mpulling…
+[1A[K    [35m⠼[m image[90m — [mpulling…
+[1A[K    [35m⠴[m image[90m — [mpulling…
+[1A[K    [35m⠦[m image[90m — [mpulling…
+[1A[K    [35m⠧[m image[90m — [mpulling…
+[1A[K    [35m⠇[m image[90m — [mpulling…
+        7/7 layers · finalizing image…
+[1A[K[1A[K    [32m✓[m image[90m — [mready
+[?25h[?25h
+    [32m✓[m Created sandbox lab-07-b
+[34m        try:[m sbx run --name lab-07-b
+
+]11;?[c
+  Stopped sandbox lab-07-b
+[34m    try:[m sbx run --name lab-07-b
+
+[32m$ [0m[1msbx ls | grep -E 'SANDBOX|lab-'[0m
+SANDBOX      AGENT    STATUS                 PORTS   WORKSPACE                                   CREATED
+lab-07-a     shell    ● running (detached)           -                                           31s
+lab-07-b     shell    ○ stopped                      -                                           17s
+
+[36m# prune removes every stopped sandbox, not just the course's: look first[0m
+[32m$ [0m[1msbx prune --dry-run | grep -E 'Would|SANDBOX|lab-'[0m
+Would remove 3 stopped sandboxes:
+SANDBOX      AGENT    STOPPED   WORKSPACE
+lab-07-b     shell    9s        -
+
+[36m# The course's cleanup script only touches lab-* sandboxes and ~/sbx-labs[0m
+[32m$ [0m[1mscripts/cleanup.sh[0m
+Deleting course sandboxes...
+  sandbox lab-07-a
+  sandbox lab-07-b
+Done.
+[32m$ [0m[1msbx ls | grep -E 'lab-' || echo no lab sandboxes left[0m
+no lab sandboxes left
+
+[36m# Where the disk space goes[0m
+[32m$ [0m[1mdu -sh ~/.local/state/sandboxes; sbx template ls[0m
+4.7G	/home/serra/.local/state/sandboxes
+]11;?[c
+[90m  REPOSITORY[m                           [90mTAG[m                  [90mIMAGE ID[m       [90mFLAVOR[m               [90mCREATED[m
+  docker.io/docker/sandbox-templates   claude-code-docker   4a94d9144a70   claude-code-docker   3d
+  docker.io/docker/sandbox-templates   shell-docker         b178ca62ec2e   shell-docker         3d
+
+
+[36m# Remove the Anthropic key from Lab 06 when you are done: sbx secret rm anthropic -f[0m
+
+[36m# Sign out (stops running sandboxes): sbx logout[0m
+
+[36m# Back to a fresh install (deletes ALL sandboxes, images, policies, secrets): sbx reset[0m
+
+[36m# Uninstall: sudo apt-mark unhold docker-sbx && sudo apt-get purge -y docker-sbx[0m
+
+Script done on 2026-10-24 16:23:34+01:00 [COMMAND_EXIT_CODE="0"]
