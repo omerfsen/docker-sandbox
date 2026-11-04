@@ -1,0 +1,186 @@
+Script started on 2026-11-04 15:59:11+00:00 [COMMAND="stty cols 110 rows 32 2>/dev/null; labs/08-whats-new-0.51/solution.sh" <not executed on terminal>]
+
+[36m# Lab 08 (bonus) — What's new in sbx 0.51[0m
+[32m$ [0m[1msbx rm --force lab-08-new lab-08-mounts lab-08-wd; rm -rf ~/sbx-labs/08[0m
+[32m$ [0m[1msbx version; sbx diagnose | grep -E 'Version match|passed'[0m
+
+  sbx version v0.51.0 7d55286de0c775148b985ed349f760f1eba06203
+
+  ✓ Version match — v0.51.0
+  14 passed · 2 warnings · 4 skipped
+
+[36m# Built-in agents are now published kits; the shell agent is Debian 13[0m
+[32m$ [0m[1mmkdir -p ~/sbx-labs/08/ws ~/sbx-labs/08/victim ~/sbx-labs/08/out && sbx create --name lab-08-new shell ~/sbx-labs/08/ws >/dev/null && sbx run -d --name lab-08-new[0m
+
+    [90m○[m shell[90m — [mnow ships as a kit; resolving docker.io/sbx/shell:latest
+
+]11;?[c
+    [32m✓[m sandbox lab-08-new[90m — [mattaching to the existing sandbox (workspace /home/serra/sbx-labs/08/ws)
+    [32m✓[m sandbox lab-08-new[90m — [mrunning detached
+        [90mworkspace /home/serra/sbx-labs/08/ws[m
+540c5702-1cae-43c2-9536-bfa186cbc21b
+
+[32m$ [0m[1msbx exec lab-08-new sh -c '. /etc/os-release; echo $PRETTY_NAME'[0m
+Docker Hardened Images/Debian GNU/Linux 13 (trixie)
+[32m$ [0m[1msbx inspect lab-08-new | grep -E 'Kits|Created with|Image:'[0m
+  Kits:                    docker.io/sbx/shell@sha256:5548b2fa5e9d1d63d11fd6ee0d8404b727b5b9a018aa14644835805d1cc47979
+  Created with:            v0.51.0
+  Image:                   sandbox-kit-assembled:86c8772c84b423df
+
+[36m# The agent plants symlinks to host paths in the shared workspace[0m
+[32m$ [0m[1mecho host-canary > ~/sbx-labs/08/host-canary.txt[0m
+[32m$ [0m[1mW=$HOME/sbx-labs/08/ws; sbx exec lab-08-new sh -c "ln -sfn $HOME/sbx-labs/08/host-canary.txt $W/notes.txt; ln -sfn $HOME/sbx-labs/08/victim $W/drop; ln -sfn .. $W/up; ls -l $W"[0m
+total 0
+lrwxrwxrwx 1 agent agent 30 Nov  4 15:59 drop -> /home/serra/sbx-labs/08/victim
+lrwxrwxrwx 1 agent agent 39 Nov  4 15:59 notes.txt -> /home/serra/sbx-labs/08/host-canary.txt
+lrwxrwxrwx 1 agent agent  2 Nov  4 15:59 up -> ..
+
+[36m# sbx cp resolves every path inside the VM, so the links lead nowhere[0m
+[32m$ [0m[1msbx cp lab-08-new:$HOME/sbx-labs/08/ws/notes.txt ~/sbx-labs/08/out/a.txt[0m
+
+]11;?[c[31m  error:[m path "/home/serra/sbx-labs/08/ws/notes.txt" not found in container
+
+[2m[exit 1][0m
+[32m$ [0m[1msbx cp -L lab-08-new:$HOME/sbx-labs/08/ws/up/host-canary.txt ~/sbx-labs/08/out/c.txt[0m
+
+]11;?[c[31m  error:[m path "/home/serra/sbx-labs/08/ws/up/host-canary.txt" not found in container
+
+[2m[exit 1][0m
+[32m$ [0m[1mecho payload > ~/sbx-labs/08/out/payload.txt && sbx cp ~/sbx-labs/08/out/payload.txt lab-08-new:$HOME/sbx-labs/08/ws/drop/payload.txt[0m
+
+]11;?[c[31m  error:[m upload archive: request failed: 500 Internal Server Error: tar extract failed in sandbox "lab-08-new": tar: /home/serra/sbx-labs/08/ws/drop: Cannot open: No such file or directory tar: Error is not recoverable: exiting now
+
+[2m[exit 1][0m
+[32m$ [0m[1msbx cp ~/sbx-labs/08/out/payload.txt lab-08-new:$HOME/sbx-labs/08/ws/up/escaped.txt[0m
+[32m$ [0m[1mls -A ~/sbx-labs/08/victim; ls ~/sbx-labs/08; cat ~/sbx-labs/08/host-canary.txt[0m
+host-canary.txt  out  victim  ws
+host-canary
+[32m$ [0m[1msbx exec lab-08-new ls /home/serra/sbx-labs/08/[0m
+AGENTS.md
+escaped.txt
+kits-agent-context
+ws
+
+[36m# Query-parameter rules (0.50.0): must include, not only[0m
+[32m$ [0m[1msbx policy allow network --sandbox lab-08-new httpbin.org --method GET --path /anything/report --query format=csv[0m
+]11;?[c
+  Added rule 0b569426-cf35-4aed-9e6c-41b62f33c7ab to policy local (scope: sandbox:lab-08-new): GET httpbin.org/anything/report?format=csv
+
+[32m$ [0m[1msleep 3; for q in format=csv format=json '' format=CSV 'format=csv&extra=1' 'format=cs%76'; do printf '%-22s ' "?$q"; sbx exec lab-08-new curl -s -o /dev/null -w '%{http_code}\n' "https://httpbin.org/anything/report?$q"; done[0m
+?format=csv            200
+?format=json           403
+?                      403
+?format=CSV            403
+?format=csv&extra=1    200
+?format=cs%76          200
+
+[36m# The approval queue still shows only method, host and path[0m
+[32m$ [0m[1msbx exec lab-08-new curl -s -o /dev/null -w '%{http_code}\n' 'https://httpbin.org/anything/delete?id=42'; sleep 2; sbx policy approval ls | grep -o 'GET httpbin.org:443/anything/delete'[0m
+403
+GET httpbin.org:443/anything/delete
+
+[36m# Extra workspaces at a custom target, read-only[0m
+[32m$ [0m[1mmkdir -p ~/sbx-labs/08/docs && echo "docs from host" > ~/sbx-labs/08/docs/guide.txt[0m
+[32m$ [0m[1msbx create --name lab-08-mounts shell ~/sbx-labs/08/ws ~/sbx-labs/08/docs:/opt/docs:ro | grep -A1 Workspace[0m
+
+    [90m○[m shell[90m — [mnow ships as a kit; resolving docker.io/sbx/shell:latest
+  Workspace:  /home/serra/sbx-labs/08/ws (rw)
+              /home/serra/sbx-labs/08/docs → /opt/docs (ro)
+
+[32m$ [0m[1msbx run -d --name lab-08-mounts >/dev/null && sbx exec lab-08-mounts sh -c 'cat /opt/docs/guide.txt; touch /opt/docs/x'[0m
+
+    [32m✓[m sandbox lab-08-mounts[90m — [mattaching to the existing sandbox (workspace /home/serra/sbx-labs/08/ws)
+    [32m✓[m sandbox lab-08-mounts[90m — [mrunning detached
+        [90mworkspace /home/serra/sbx-labs/08/ws[m
+
+docs from host
+touch: cannot touch '/opt/docs/x': Read-only file system
+[2m[exit 1][0m
+
+[36m# --workdir starts the agent in a subdirectory of the workspace[0m
+[32m$ [0m[1mmkdir -p ~/sbx-labs/08/ws/src && sbx run --rm --name lab-08-wd --workdir ~/sbx-labs/08/ws/src shell ~/sbx-labs/08/ws -- -c pwd[0m
+]11;?[c
+    [90m○[m shell[90m — [mnow ships as a kit; resolving docker.io/sbx/shell:latest
+
+[94m  SANDBOX[m
+    [90mName:[m       lab-08-wd
+    [90mAgent:[m      shell
+    [90mKit:[m        docker.io/sbx/shell@sha256:5548b2fa5e9d1d63d11fd6ee0d8404b727b5b9a018aa14644835805d1cc47979
+    [90mWorkspace:[m  ~/sbx-labs/08/ws (rw)
+    [90mImage:[m      docker.io/sbx/shell@sha256:5548b2fa5e9d1d63d11fd6ee0d8404b727b5b9a018aa14644835805d1cc47979
+    [90mCPU:[m        4
+    [90mMemory:[m     3.9 GiB
+
+[94m  IMAGE[m
+    [35m⠋[m image[90m — [mchecking…
+[?25l[1A[K    [32m✓[m image[90m — [mready
+[?25h
+[94m  AGENT[m
+    [32m✓[m assembled kit image ready (cached)
+[?25h
+    [32m✓[m Created sandbox lab-08-wd
+
+    [90m○[m shell[90m — [mstarting in sandbox lab-08-wd…
+        [90mworkspace /home/serra/sbx-labs/08/ws[m
+
+\]0;[📦 lab-08-wd][2J[H
+                  [36m.=****=.[0m
+            [36m:+*******#******+:[0m
+        [36m.*********[0m        [36m*********.[0m
+      [36m:******:[0m                [36m:******:[0m
+      [36m***:[0m                        [36m:***[0m
+      [36m***[0m         [34m=******=[0m         [36m***[0m
+      [36m***[0m        [34m**********[0m        [36m*#*[0m
+      [36m**#[0m       [34m***=[0m    [34m=***[0m       [36m***[0m
+      [36m***[0m       [34m*#*[0m      [34m*#*[0m       [36m**#[0m
+      [36m***[0m       [34m+***[0m    [34m***+[0m       [36m***[0m
+      [36m**#[0m        [34m=***  *#*=[0m        [36m***[0m
+      [36m***[0m        [34m**#*  ****[0m        [36m***[0m
+      [36m****[0m       [34m***    ***[0m        [36m=+[0m
+      [36m***=[0m     [34m**#******#**[0m    [36m**=[0m
+        [36m****[0m     [34m**********[0m    [36m:***[0m
+        [36m****-[0m                 [36m:***[0m
+          [36m-****[0m           [96m**************[0m      Docker Sandbox / DHI
+            [36m*****[0m         [96m+*****#*******[0m
+              [36m+****+[0m    [96m+*[0m     [96m:***[0m                lab-08-wd
+                [36m.**********[0m    [96m:***[0m
+                  [36m.****.       [96m=+[0m                shell docker
+
+/home/serra/sbx-labs/08/ws/src
+\]0;
+
+[36m# Stricter checks[0m
+[32m$ [0m[1msbx policy allow network --sandbox "" example.org[0m
+
+]11;?[c[31m  error:[m --sandbox must contain a non-empty value
+[34m    try:[m sbx policy allow network --help
+
+[2m[exit 1][0m
+[32m$ [0m[1msbx exec lab-08-nope true; echo "exit=$?"[0m
+
+]11;?[c[31m  error:[m sandbox 'lab-08-nope' not found
+[34m    try:[m sbx ls
+
+exit=125
+[32m$ [0m[1msbx secret set-custom --sandbox lab-08-new --env NOHOST_TOKEN --value fake-nohost-123[0m
+
+]11;?[c[31m  error:[m --host is required
+[34m    try:[m sbx secret set-custom --help
+
+[2m[exit 1][0m
+[32m$ [0m[1msbx settings ls | grep -E 'clipboard|fuse'[0m
+clipboard.imagePaste                     false                              bool     default             Allow sandboxed agents to read the host clipboa…
+clipboard.textCopy                       false                              bool     default             Allow sandboxed processes to copy text to the h…
+sandbox.fuse                             true                               bool     default             Expose /dev/fuse and grant SYS_ADMIN for mounti…
+
+[36m# Clean up[0m
+[32m$ [0m[1msbx rm --force lab-08-new lab-08-mounts[0m
+]11;?[c
+[?25l    [35m⠋[m removing sandbox lab-08-new [90m(0s)[m
+[1A[K[?25h  Removed sandbox lab-08-new
+[?25l    [35m⠋[m removing sandbox lab-08-mounts [90m(0s)[m
+[1A[K[?25h  Removed sandbox lab-08-mounts
+
+[32m$ [0m[1mrm -rf ~/sbx-labs/08[0m
+
+Script done on 2026-11-04 16:02:21+00:00 [COMMAND_EXIT_CODE="0"]

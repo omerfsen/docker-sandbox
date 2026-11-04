@@ -71,6 +71,7 @@ All commands run from the repository root.
 | 05 | [Credentials the agent never sees](labs/05-credentials/README.md) | `sbx secret`, placeholders swapped only for the bound host | Secret injection |
 | 06 | [Capstone: run Claude Code](labs/06-run-claude-code/README.md) | A real agent in a sandbox under policy | Everything together |
 | 07 | [Clean up](labs/07-cleanup/README.md) | rm, prune, secrets, reset, logout | Operations |
+| 08 | [Bonus: what's new in sbx 0.51](labs/08-whats-new-0.51/README.md) | Upgrade and roll back, the `sbx cp` symlink fixes, `--query` rules, kits, mount targets, stricter checks | Upgrades |
 
 Time: about **2–3 hours** in total.
 
