@@ -149,3 +149,6 @@ bats labs/07-cleanup/test.bats
 ```
 
 You are done. Thanks for working through the course.
+
+**Bonus:** [Lab 08](../08-whats-new-0.51/README.md) upgrades to sbx 0.51, which fixes `sbx cp`
+symlink escapes and adds query-parameter rules.
